@@ -1,0 +1,108 @@
+<script src="simpletest.js"></script>
+<script type="text/javascript">
+
+
+
+(function(root, undefined) {
+	var libraryStorage = {};
+
+	function librarySystem (libraryName, dependencyArray, callback) {
+		// creating a library 
+		if (arguments.length > 1) {
+			libraryStorage[libraryName] = {
+				dependencyArray: dependencyArray,
+				callback: callback,
+				callbackHasReturnedLibrary: false
+			};
+
+		} else {
+		// using/ returning the library for use 
+			return loadLibrary(libraryName);
+		} 
+	};
+
+	function loadLibrary(libraryName){
+
+		var arrayOfDependencies = [];
+		var library =libraryStorage[libraryName];
+
+		// If callbackHasReturnedLibrary === false, return dependencies and run them
+		// were injecting the variable arrayOfDependencies with the results of calling map on our original dependencyArray. the result is an array with dependencies stored in  arrayOfDependencies for later use.
+
+		if (library.callbackHasReturnedLibrary === false){
+			arrayOfDependencies = library.dependencyArray.map( function(dependency) {
+				return librarySystem(dependency);
+			});
+
+			// store a  callback loaded w/ arrayOfDependencies as a new property on library object and save it as library.loaded 
+			// similar to runWithdebugger because we are passing an array as 2nd argumentto the callback. the callback is now loaded and ready for use.
+			library.loaded =  library.callback.apply(null, arrayOfDependencies);
+
+			//change the callbackHasReturnedLibrary: property to TRUE
+			// app requirment: callback function should only run once. 
+			library.callbackHasReturnedLibrary = true;
+		}
+
+		return library.loaded;
+	};
+
+	root['librarySystem'] = librarySystem;
+
+}(this));
+
+tests({
+ 
+'It should take a libraryName and callback function that stores the library and returns it': function() {
+  	librarySystem('app', [], function() {
+  		return 'loaded app';
+  	});
+
+  	eq(librarySystem('app'), 'loaded app');
+  },
+  'It should load the libraries out of order' : function() {
+	librarySystem('workBlurb', ['name', 'company'], function(name, company) {
+		return name + ' works at ' + company;
+	});
+
+	librarySystem('name', [], function() {
+		return 'Gordon';
+	});
+
+	librarySystem('company', [], function() {
+		return 'Watch and Code';
+	});
+
+	var returnedLibrary = librarySystem('workBlurb'); // 'Gordon works at Watch and Code'
+	eq(returnedLibrary,'Gordon works at Watch and Code' );
+  },
+  
+  'It should take a dependency and pass it into callback function and return it with the library': function(){
+  	librarySystem('helper', [], function() { return 'helper'});
+  	librarySystem('mainApp', ['helper'], function( helper) {
+  		return 'The mainApp uses ' + helper});
+  	
+  	var returnedLibrary = librarySystem('mainApp');
+  	eq(returnedLibrary, "The mainApp uses helper");
+  	
+  },
+ 
+'It should take an array of dependencies, pass into callback function and return it with the library': function() {
+	librarySystem('name', [], function() {
+	  	return 'Gordon';
+		});
+
+		librarySystem('company', [], function() {
+	  	return 'Watch and Code';
+		});
+
+		librarySystem('workBlurb', ['name', 'company'], function(name, company) {
+	  	return name + ' works at ' + company;
+		});	
+
+  	var returnedLibrary = librarySystem('workBlurb');
+  	eq(returnedLibrary, 'Gordon works at Watch and Code');
+  }
+ 
+ });	
+
+</script>
