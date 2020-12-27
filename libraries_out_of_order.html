@@ -1,0 +1,195 @@
+<script src="/Users/johnbellfield/Documents/Coding Files/2020 WAC Accounting JS BEASTS/creating libraries out of order /simpletest.js"></script>
+<script>
+
+
+//Your task is to rewrite librarySystem so that the following code works too.
+// The only difference is that we're loading the libraries out of order 
+// (i.e. 'workBlurb' is created before its dependencies, 'name'and 'company').
+
+// librarySystem('workBlurb', ['name', 'company'], function(name, company) {
+//   return name + ' works at ' + company;
+// });
+
+// librarySystem('name', [], function() {
+//   return 'Gordon';
+// });
+
+// librarySystem('company', [], function() {
+//   return 'Watch and Code';
+// });
+
+// librarySystem('workBlurb'); // 'Gordon works at Watch and Code'
+
+// Since this is starting to get complicated, you should write tests to make sure your solution fulfills all the requirements.
+// If you want some warmup before tackling this, writing reduce on your own (as we did in Test Driven Development Part 9) 
+// is a good exercise to get you into the right mindset.
+
+// Your tests should ensure that libraries can be created out of order.
+// They should also ensure that all the requirements from the previous challenge are still being met.
+// In addition to the new loading order feature, your solution should ensure that the callback 
+// function for each library is run only once. So for example, even if librarySystem('workBlurb')
+//  appears 100 times in your app, the 'workBlurb' callback function should only run once. You should definitely have a test for this.
+
+
+
+
+(function() {
+
+        // Property accessors provide access to an object's properties by using the dot notation or the bracket notation.
+        // const person1 = {};
+        // person1['firstname'] = 'Mario';
+        // person1['lastname'] = 'Rossi';
+        // console.log(person1.firstname);
+        // expected output: "Mario"
+
+
+        // object for saving data / creating a library  
+    var libraryStorage = {};
+
+    function librarySystem( libraryName, dependencyArray, callback) {
+
+        // Create case
+        // save data to the libraryStorage object using Property accessors 
+        // ex: libraryStorage[libraryName] = { dependencyArray: dependencyArray, callback: callback };
+      if (arguments.length > 1) {
+
+        // An object property name can be any valid JavaScript string
+        // Square bracket notation is useful when property names are to be dynamically determined
+        // (when the property name is not determined until runtime). mdn
+        libraryStorage[libraryName] = {
+        dependencyArray: dependencyArray,
+        callback: callback,
+        
+      }
+
+      if (libraryStorage[arguments[0]].dependencyArray.length === 0) {
+          libraryStorage[libraryName] = libraryStorage[libraryName].callback();
+          return;
+        }
+      
+        if (libraryStorage[arguments[0]].dependencyArray.length > 0) {
+          var savedDependencyArray =  libraryStorage[libraryName].dependencyArray.map(function (dependency) {
+            // first use of librarySystem being called recursively
+            // check if callbackHasBeenCalled is false 
+            // if (callback has not been called) then you can proceed else { the call back has already been called do not call more than once}
+              return librarySystem(dependency);
+          })
+
+
+          var dependenciesAreLoaded; // is it true that the dependencies !== 'undefined' aka defined and loaded
+          var undefinedDependencyCounter = 0;
+
+          // if any dependency from savedDependencyArray is undefined, dependenciesAreLoaded will be false 
+          // else all dependencies have been defined and are ready to be passed to the callback and returned 
+          // libraryStorage[libraryName] = libraryStorage[libraryName].callback.apply(this, savedDependencyArray); 
+          // return libraryStorage[libraryName];
+
+          for (var i = 0; i < savedDependencyArray; i++) {
+            // if dependency library does not exist
+            if (savedDependencyArray[i] === 'undefined' ){
+              undefinedDependencyCounter++;
+            }
+          }
+          if (undefinedDependencyCounter > 0) {
+            dependenciesAreLoaded = false;
+          } else {
+            dependenciesAreLoaded = true;
+          }
+          // use check (Before running callback) to make sure that every dependency IS defined. 
+          if (dependenciesAreLoaded) {
+            // if every dependency is defined then libraryStorage[libraryName] = callback being run w savedDependencyArray 
+            // finally return libraryStorage[libraryName];
+            libraryStorage[libraryName] = libraryStorage[libraryName].callback.apply(this, savedDependencyArray);
+            
+
+          } else {
+            return 'its not ready';
+          }
+          
+        }
+
+      } else {
+        if(libraryStorage[libraryName]) {
+          return libraryStorage[libraryName]
+        } else {
+          return 'its not ready';
+        }
+     
+      }
+    }
+    window.librarySystem = librarySystem;
+
+  })();
+
+
+  tests({
+    'It should store the library and return it. It saves a library by taking a libraryName, an array, and a callback function as arguments. ': function() {
+        librarySystem('app', [], function () { return 'app loaded'});
+        var result = librarySystem('app');
+        eq( result, 'app loaded');
+      },
+
+      'It should  take a  dependency and pass it to the callback function so that it can be returned/ used.': function () {
+        
+        librarySystem('a library', [], function () {
+          return ' a library';
+        })
+        librarySystem('new Library', ['a library'], function ( lib) {
+          return  ' new Library is loaded with ' + lib;
+        })
+        var result = librarySystem('new Library');
+        eq(result, ' new Library is loaded with  a library');
+  
+      },
+      'It should  take multiple  dependencies and pass them to the callback function and return the dependencies.': function () {
+        
+        librarySystem('name', [], function() {
+          return 'Gordon';
+        });
+
+        librarySystem('company', [], function() {
+          return 'Watch and Code';
+        });
+
+        librarySystem('workBlurb', ['name', 'company'], function(name, company) {
+          return name + ' works at ' + company;
+        });
+            
+        var result = librarySystem('workBlurb'); // 'Gordon works at Watch and Code'    
+        eq(result, 'Gordon works at Watch and Code');
+        
+      },
+      'It should be able to save libraries out of order and still return the library ': function() {
+       
+      librarySystem('workBlurb', ['name', 'company'], function(name, company) {
+        return name + ' works at ' + company;
+      });
+
+      librarySystem('name', [], function() {
+        return 'Gordon';
+      });
+
+      librarySystem('company', [], function() {
+        return 'Watch and Code';
+      });
+
+      var result = librarySystem('workBlurb'); // 'Gordon works at Watch and Code'    
+        eq(result, 'Gordon works at Watch and Code');
+      },
+      "it should not run the callback more than once":function () {
+        var callbackran = 0;
+        librarySystem('name', [], function() {
+          callbackran++;
+          return 'Gordon';
+        });
+       librarySystem('name');
+       librarySystem('name');
+       eq(callbackran,1);
+       librarySystem('name');
+       eq(callbackran,1); 
+
+      }
+           
+
+  });
+</script>
